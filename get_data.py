@@ -3,10 +3,9 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-06-06 18:38:04
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-09-13 17:39:23
+# @Last Modified time: 2019-09-13 17:53:46
 
-''' Sub-panels of the NICE and SONIC accuracies comparative figure. '''
-
+''' Generate the data necessary to produce the paper figures. '''
 
 import os
 import logging
@@ -18,17 +17,11 @@ from PySONIC.utils import *
 from PySONIC.neurons import getPointNeuron
 from PySONIC.core import Batch
 
-from utils import *
 
-def NICE_vs_SONIC_comparison(data_root, mpi, loglevel):
+def comparisons(outdir, mpi, loglevel):
     ''' Comparison of predictions of the Full NICE vs coarse-grained SONIC models
         of different neurons across the LIFUS parameter range.
     '''
-
-
-    # Sub-directory
-    subdir = os.path.join(data_root, 'NICE vs SONIC')
-    output = []
 
     # Parameters
     a = 32e-9  # m
@@ -42,6 +35,8 @@ def NICE_vs_SONIC_comparison(data_root, mpi, loglevel):
     methods = ['sonic', 'full']
     freqs = np.array([20e3, 100e3, 500e3, 1e6, 2e6, 3e6, 4e6])  # Hz
     radii = np.logspace(np.log10(16), np.log10(64), 5) * 1e-9  # m
+
+    output = []
 
     # Get RS neuron threshold amplitudes as as function of US frequency and sonophore radius
     pneuron = getPointNeuron('RS')
@@ -66,16 +61,15 @@ def NICE_vs_SONIC_comparison(data_root, mpi, loglevel):
     nbls = NeuronalBilayerSonophore(a, pneuron)
 
     # Span US amplitude and US frequency ranges
-    queue = []
     Athr = RS_Athr_vs_freq[Akey].loc[Fdrive * 1e-3]  # kPa
     amps = np.array([Athr - 5., Athr, Athr + 20., 50, 100, 300, 600]) * 1e3  # Pa
-    queue += nbls.simQueue([Fdrive], amps, [tstim], [toffset], [PRF], [DC], [fs], methods,
-                           outputdir=subdir)
+    queue = nbls.simQueue([Fdrive], amps, [tstim], [toffset], [PRF], [DC], [fs], methods,
+                          outputdir=outdir)
     for x in freqs:
         Athr = RS_Athr_vs_freq[Akey].loc[x * 1e-3]  # kPa
         Adrive = (Athr + 20.) * 1e3  # Pa
         queue += nbls.simQueue([x], [Adrive], [tstim], [toffset], [PRF], [DC], [fs], methods,
-                               outputdir=subdir)
+                               outputdir=outdir)
     output += Batch(nbls.simAndSave, queue).run(mpi=mpi, loglevel=loglevel)
 
     # Span sonophore radius frequency range
@@ -84,7 +78,7 @@ def NICE_vs_SONIC_comparison(data_root, mpi, loglevel):
         Adrive = (Athr + 20.) * 1e3  # Pa
         nbls = NeuronalBilayerSonophore(x, pneuron)
         queue = nbls.simQueue([Fdrive], [Adrive], [tstim], [toffset], [PRF], [DC], [fs], methods,
-                              outputdir=subdir)
+                              outputdir=outdir)
         output += Batch(nbls.simAndSave, queue).run(mpi=mpi, loglevel=loglevel)
 
     # Span DC range with RS and LTS neurons
@@ -94,7 +88,7 @@ def NICE_vs_SONIC_comparison(data_root, mpi, loglevel):
         pneuron = getPointNeuron(neuron)
         nbls = NeuronalBilayerSonophore(a, pneuron)
         queue = nbls.simQueue([Fdrive], [Adrive], [tstim], [toffset], [PRF], DCs, [fs], methods,
-                              outputdir=subdir)
+                              outputdir=outdir)
         output += Batch(nbls.simAndSave, queue).run(mpi=mpi, loglevel=loglevel)
 
     # Span PRF range with LTS neuron
@@ -105,20 +99,16 @@ def NICE_vs_SONIC_comparison(data_root, mpi, loglevel):
     PRFs = sum([[x, 2 * x, 5 * x] for x in PRFs_orders[:-1]], []) + [PRFs_orders[-1]]  # Hz
     DC = 0.05
     queue = nbls.simQueue([Fdrive], [Adrive], [tstim], [toffset], PRFs, [DC], [fs], methods,
-                          outputdir=subdir)
+                          outputdir=outdir)
     output += Batch(nbls.simAndSave, queue).run(mpi=mpi, loglevel=loglevel)
 
     return output
 
 
-def FR_maps(data_root, mpi, loglevel):
+def maps(outdir, mpi, loglevel):
     ''' Duty cycle x amplitude maps of the neural firing rates of various neurons at various
         pulse-repetition frequencies, predicted by the SONIC model.
     '''
-
-    # Sub-directory
-    subdir = os.path.join(data_root, 'FR maps')
-    output = []
 
     # Parameters
     neurons = ['RS', 'LTS']
@@ -131,6 +121,8 @@ def FR_maps(data_root, mpi, loglevel):
     PRFs = np.logspace(1, 3, 3)  # Hz
     fs = 1.
 
+    output = []
+
     # Span DC x Amplitude space for each neuron and PRF
     for neuron in neurons:
         pneuron = getPointNeuron(neuron)
@@ -138,9 +130,9 @@ def FR_maps(data_root, mpi, loglevel):
         for PRF in PRFs:
             code = '{} {}Hz PRF{}Hz {}s'.format(
                 pneuron.name, *si_format([Fdrive, PRF, tstim], space=''))
-            subsubdir = os.path.join(subdir, code)
+            suboutdir = os.path.join(outdir, code)
             queue = nbls.simQueue([Fdrive], [Adrive], [tstim], [toffset], [PRF], [DC], [fs], ['sonic'],
-                                  outputdir=subsubdir)
+                                  outputdir=suboutdir)
             output += Batch(nbls.simAndSave, queue).run(mpi=mpi, loglevel=loglevel)
 
     return output
@@ -159,13 +151,10 @@ def getThresholdAmplitudes(outdir, neuron, a, Fdrive, tstim, toffset, PRF, DCs):
     return df
 
 
-def excitation_thresholds(data_root, mpi, loglevel):
+def thresholds(outdir, mpi, loglevel):
     ''' Duty-cycle-dpendent excitation threshold amplitudes of several neurons for various
         US frequencies and sonophore radii.
     '''
-
-    # Sub-directory
-    subdir = os.path.join(data_root, 'excitation thresholds')
 
     # Parameters
     neurons = ['RS', 'LTS']
@@ -182,16 +171,13 @@ def excitation_thresholds(data_root, mpi, loglevel):
     # Titrate over DC range for different US frequencies and sonophore radii
     for neuron in neurons:
         for x in freqs:
-            getThresholdAmplitudes(subdir, neuron, a, x, tstim, toffset, PRF, DCs)
+            getThresholdAmplitudes(outdir, neuron, a, x, tstim, toffset, PRF, DCs)
         for x in radii:
-            getThresholdAmplitudes(subdir, neuron, x, Fdrive, tstim, toffset, PRF, DCs)
+            getThresholdAmplitudes(outdir, neuron, x, Fdrive, tstim, toffset, PRF, DCs)
 
 
-def STN_neuron(data_root, mpi, loglevel):
+def STN(outdir, mpi, loglevel):
     ''' Behavior of the STN neuron under CW sonication for various amplitudes. '''
-
-    # Sub-directory
-    subdir = os.path.join(data_root, 'STN neuron')
 
     # Parameters
     pneuron = getPointNeuron('STN')
@@ -212,24 +198,25 @@ def STN_neuron(data_root, mpi, loglevel):
     # Span low-intensity range
     nbls = NeuronalBilayerSonophore(a, pneuron)
     queue = nbls.simQueue([Fdrive], amps, [tstim], [toffset], [PRF], [DC], [fs], ['sonic'],
-                          outputdir=subdir)
+                          outputdir=outdir)
     output = Batch(nbls.simAndSave, queue).run(mpi=mpi, loglevel=loglevel)
 
     return output
 
 
 if __name__ == '__main__':
-
-    data_root = selectDirDialog(title='Select data root directory')
-    mpi = True
     loglevel = logging.INFO
     logger.setLevel(loglevel)
-
+    mpi = True
+    data_root = selectDirDialog(title='Select data root directory')
     logger.info('Generating SONIC paper data')
-
-    args = (data_root, mpi, loglevel)
     dash = '---------------------------------------------------'
-    for func in [NICE_vs_SONIC_comparison, FR_maps, excitation_thresholds, STN_neuron]:
+    funcs = [comparisons, maps, thresholds, STN]
+    outdirs = [os.path.join(data_root, func.__name__) for func in funcs]
+    for outdir in outdirs:
+        if not os.path.isdir(outdir):
+            os.mkdir(outdir)
+    for func, outdir in zip(funcs, outdirs):
         print(f'{dash} {func.__name__} {dash}')
-        func(*args)
+        func(outdir, mpi, loglevel)
         print(f'{dash}{dash}')
