@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-06-06 18:38:04
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-09-13 17:26:49
+# @Last Modified time: 2019-09-13 17:39:23
 
 ''' Sub-panels of the NICE and SONIC accuracies comparative figure. '''
 
@@ -43,8 +43,6 @@ def NICE_vs_SONIC_comparison(data_root, mpi, loglevel):
     freqs = np.array([20e3, 100e3, 500e3, 1e6, 2e6, 3e6, 4e6])  # Hz
     radii = np.logspace(np.log10(16), np.log10(64), 5) * 1e-9  # m
 
-    logger.info('Computing RS neuron threshold exictation amplitudes for various US frequencies and sonophore radii')
-
     # Get RS neuron threshold amplitudes as as function of US frequency and sonophore radius
     pneuron = getPointNeuron('RS')
     nbls = NeuronalBilayerSonophore(a, pneuron)
@@ -62,8 +60,6 @@ def NICE_vs_SONIC_comparison(data_root, mpi, loglevel):
             NeuronalBilayerSonophore(x, pneuron).titrate(Fdrive, tstim, toffset) * 1e-3 for x in radii])
     })
     RS_Athr_vs_radius.to_csv('RS_Athr_vs_radius.csv', index_col=akey)
-
-    logger.info('Running comparative simulations of NICE and SONIC models across LIFUS space')
 
     # CW simulations with RS neuron
     pneuron = getPointNeuron('RS')
@@ -229,9 +225,11 @@ if __name__ == '__main__':
     loglevel = logging.INFO
     logger.setLevel(loglevel)
 
+    logger.info('Generating SONIC paper data')
+
     args = (data_root, mpi, loglevel)
-    NICE_vs_SONIC_comparison(*args)
-    FR_maps(*args)
-    FR_maps(*args)
-    excitation_thresholds(*args)
-    STN_neuron(*args)
+    dash = '---------------------------------------------------'
+    for func in [NICE_vs_SONIC_comparison, FR_maps, excitation_thresholds, STN_neuron]:
+        print(f'{dash} {func.__name__} {dash}')
+        func(*args)
+        print(f'{dash}{dash}')
