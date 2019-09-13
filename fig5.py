@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-06-06 18:38:04
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-06-28 16:14:02
+# @Last Modified time: 2019-08-22 12:35:35
 
 ''' Sub-panels of the NICE and SONIC accuracies comparative figure. '''
 
@@ -124,9 +124,9 @@ def Qprofiles_vs_amp(neuron, a, Fdrive, CW_Athrs, tstim, toffset, inputdir):
     amps = np.array([Athr - 5., Athr, Athr + 20.]) * 1e3  # Pa
     subdir = os.path.join(inputdir, neuron)
     sonic_fpaths = getSims(subdir, neuron, a, NeuronalBilayerSonophore.simQueue(
-        [Fdrive], amps, [tstim], [toffset], [None], [1.], 'sonic'))
+        [Fdrive], amps, [tstim], [toffset], [None], [1.], [1.], ['sonic']))
     full_fpaths = getSims(subdir, neuron, a, NeuronalBilayerSonophore.simQueue(
-        [Fdrive], amps, [tstim], [toffset], [None], [1.], 'full'))
+        [Fdrive], amps, [tstim], [toffset], [None], [1.], [1.], ['full']))
     regimes = ['AT - 5 kPa', 'AT', 'AT + 20 kPa']
     comp_plot = CompTimeSeries(sum([[x, y] for x, y in zip(full_fpaths, sonic_fpaths)], []), 'Qm')
     fig = comp_plot.render(
@@ -135,9 +135,10 @@ def Qprofiles_vs_amp(neuron, a, Fdrive, CW_Athrs, tstim, toffset, inputdir):
         colors=plt.get_cmap('Paired').colors[:2 * len(regimes)],
         fs=8,
         patches='one',
-        xticks=[0, 250],
-        yticks=[getPointNeuron(neuron).Vm0, 25],
-        straightlegend=True, figsize=cm2inch(12.5, 5.8)
+        # xticks=[0, 250],
+        # yticks=[getPointNeuron(neuron).Vm0, 25],
+        # straightlegend=True,
+        figsize=cm2inch(12.5, 5.8)
     )
     fig.axes[0].get_xaxis().set_label_coords(0.5, -0.05)
     fig.subplots_adjust(bottom=0.2, right=0.95, top=0.95)
@@ -149,9 +150,9 @@ def spikemetrics_vs_amp(neuron, a, Fdrive, amps, tstim, toffset, inputdir):
     ''' Comparison of spiking metrics for CW stimuli at various supra-threshold amplitudes. '''
     subdir = os.path.join(inputdir, neuron)
     sonic_fpaths = getSims(subdir, neuron, a, NeuronalBilayerSonophore.simQueue(
-        [Fdrive], amps, [tstim], [toffset], [None], [1.], 'sonic'))
+        [Fdrive], amps, [tstim], [toffset], [None], [1.], [1.], 'sonic'))
     full_fpaths = getSims(subdir, neuron, a, NeuronalBilayerSonophore.simQueue(
-        [Fdrive], amps, [tstim], [toffset], [None], [1.], 'full'))
+        [Fdrive], amps, [tstim], [toffset], [None], [1.], [1.], 'full'))
     data_fpaths = {'full': full_fpaths, 'sonic': sonic_fpaths}
     metrics_files = {x: '{}_spikemetrics_vs_amplitude_{}.csv'.format(neuron, x)
                      for x in ['full', 'sonic']}

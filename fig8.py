@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-11-27 17:57:45
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-06-17 22:05:08
+# @Last Modified time: 2019-09-13 16:35:17
 
 ''' Sub-panels of threshold curves for various sonophore radii and US frequencies. '''
 
@@ -26,24 +26,24 @@ matplotlib.rcParams['font.family'] = 'arial'
 figbase = os.path.splitext(__file__)[0]
 
 
-def getThresholdAmplitudes(root, neuron, a, Fdrive, tstim, PRF):
-    subfolder = '{} {:.0f}nm {}Hz PRF{}Hz {}s'.format(
-        neuron, a * 1e9,
-        *si_format([Fdrive, PRF, tstim], 0, space='')
-    )
+# def getThresholdAmplitudes(root, neuron, a, Fdrive, tstim, PRF):
+#     subfolder = '{} {:.0f}nm {}Hz PRF{}Hz {}s'.format(
+#         neuron, a * 1e9,
+#         *si_format([Fdrive, PRF, tstim], 0, space='')
+#     )
 
-    fname = 'log_ASTIM.xlsx'
-    fpath = os.path.join(root, subfolder, fname)
+#     fname = 'log_ASTIM.xlsx'
+#     fpath = os.path.join(root, subfolder, fname)
 
-    df = pd.read_excel(fpath, sheet_name='Data')
-    DCs = df['Duty factor'].values
-    Athrs = df['Adrive (kPa)'].values
+#     df = pd.read_excel(fpath, sheet_name='Data')
+#     DCs = df['Duty factor'].values
+#     Athrs = df['Adrive (kPa)'].values
 
-    iDCs = np.argsort(DCs)
-    DCs = DCs[iDCs]
-    Athrs = Athrs[iDCs]
+#     iDCs = np.argsort(DCs)
+#     DCs = DCs[iDCs]
+#     Athrs = Athrs[iDCs]
 
-    return DCs, Athrs
+#     return DCs, Athrs
 
 
 def plotThresholdAmps(root, neurons, radii, freqs, PRF, tstim, fs=10, colors=None, figsize=None):

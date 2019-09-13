@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-10-01 20:45:29
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-07-01 09:38:52
+# @Last Modified time: 2019-09-13 17:23:42
 
 import os
 import numpy as np
@@ -61,11 +61,12 @@ def getCWtitrations_vs_radius(neurons, radii, Fdrive, tstim, toffset, fpath):
 def getSims(outdir, neuron, a, queue):
     fpaths = []
     updated_queue = []
-    pneuron = getPointNeurons(neuron)
+    pneuron = getPointNeuron(neuron)
     nbls = NeuronalBilayerSonophore(a, pneuron)
     for i, item in enumerate(queue):
-        Fdrive, tstim, toffset, PRF, DC, Adrive, method = item
-        fcode = nbls.filecode(Fdrive, Adrive, tstim, toffset, PRF, DC, method)
+        Fdrive, Adrive, tstim, toffset, PRF, DC, fs, method = item
+        print(item)
+        fcode = nbls.filecode(Fdrive, Adrive, tstim, toffset, PRF, DC, fs, method)
         fpath = os.path.join(outdir, '{}.pkl'.format(fcode))
         if not os.path.isfile(fpath):
             print(fpath, 'does not exist')
