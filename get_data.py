@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-06-06 18:38:04
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-09-13 17:53:46
+# @Last Modified time: 2019-09-16 17:37:45
 
 ''' Generate the data necessary to produce the paper figures. '''
 
@@ -44,17 +44,17 @@ def comparisons(outdir, mpi, loglevel):
     fkey = 'Fdrive (kHz)'
     akey = 'radius (nm)'
     Akey = 'Athr (kPa)'
-    RS_Athr_vs_freq = pd.DataFrame({
-        fkey: freqs * 1e-3,
-        Akey: np.array([nbls.titrate(x, tstim, toffset) * 1e-3 for x in freqs])
-    })
-    RS_Athr_vs_freq.to_csv('RS_Athr_vs_freq.csv', index_col=fkey)
-    RS_Athr_vs_radius = pd.DataFrame({
-        akey: radii * 1e9,
-        Akey: np.array([
-            NeuronalBilayerSonophore(x, pneuron).titrate(Fdrive, tstim, toffset) * 1e-3 for x in radii])
-    })
-    RS_Athr_vs_radius.to_csv('RS_Athr_vs_radius.csv', index_col=akey)
+    RS_Athr_vs_freq = pd.DataFrame(
+        data={Akey: np.array([nbls.titrate(x, tstim, toffset) * 1e-3 for x in freqs])},
+        index=freqs * 1e-3)
+    RS_Athr_vs_radius = pd.DataFrame(
+        data={Akey: np.array([
+            NeuronalBilayerSonophore(x, pneuron).titrate(Fdrive, tstim, toffset) * 1e-3 for x in radii])},
+        index=radii * 1e9)
+
+    # Save intermediate results in sub-directory
+    RS_Athr_vs_freq.to_csv(os.path.join(outdir, 'RS_Athr_vs_freq.csv'), index_label=fkey)
+    RS_Athr_vs_radius.to_csv(os.path.join(outdir, 'RS_Athr_vs_radius.csv'), index_label=akey)
 
     # CW simulations with RS neuron
     pneuron = getPointNeuron('RS')
