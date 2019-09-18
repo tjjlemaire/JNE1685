@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-06-06 18:38:04
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-09-18 18:06:27
+# @Last Modified time: 2019-09-18 18:10:22
 
 ''' Generate the data necessary to produce the paper figures. '''
 
@@ -223,7 +223,7 @@ def fill(text, char='-', totlength=100):
 if __name__ == '__main__':
 
     # Global parameters
-    loglevel = logging.DEBUG
+    loglevel = logging.INFO
     logger.setLevel(loglevel)
     funcs = [comparisons, maps, thresholds, STN]
     mpi = True
