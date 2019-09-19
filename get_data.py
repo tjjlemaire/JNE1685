@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-06-06 18:38:04
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-09-18 18:10:22
+# @Last Modified time: 2019-09-19 12:06:25
 
 ''' Generate the data necessary to produce the paper figures. '''
 
@@ -12,10 +12,10 @@ import logging
 import numpy as np
 import pandas as pd
 
-from PySONIC.core import NeuronalBilayerSonophore
+from PySONIC.core import NeuronalBilayerSonophore, Batch
 from PySONIC.utils import *
 from PySONIC.neurons import getPointNeuron
-from PySONIC.core import Batch
+from PySONIC.parsers import Parser
 
 
 def getQueue(a, pneuron, *sim_args, outputdir=None, overwrite=False):
@@ -43,8 +43,12 @@ def codes(a, pneuron, Fdrive, PRF, tstim):
 
 
 def comparisons(outdir, overwrite):
-    ''' Comparison of predictions of the Full NICE vs coarse-grained SONIC models
-        of different neurons across the LIFUS parameter range.
+    ''' Define simulations queue for comparisons of full NICE vs coarse-grained SONIC models
+        predictions across the LIFUS parameter space for RS and LTS neurons.
+
+        :param outdir: simulations output directory
+        :param overwrite: boolean stating whether or not overwrite existing files
+        :return: simulation batch queue
     '''
 
     # Parameters
@@ -111,13 +115,16 @@ def comparisons(outdir, overwrite):
     queue += getQueue(a, pneuron, Fdrive, Adrive, tstim, toffset, PRFs, DC, fs, methods,
                       outputdir=outdir, overwrite=overwrite)
 
-    # Return batch object
-    return Batch(init_sim_save, queue)
+    return queue
 
 
 def maps(outdir, overwrite):
-    ''' Duty cycle x amplitude maps of the neural firing rates of various neurons at various
-        pulse-repetition frequencies, predicted by the SONIC model.
+    ''' Define simulations queue for duty cycle x amplitude maps of the neural firing rates
+        of several neurons at various pulse-repetition frequencies, predicted by the SONIC model.
+
+        :param outdir: simulations output directory
+        :param overwrite: boolean stating whether or not overwrite existing files
+        :return: simulation batch queue
     '''
 
     # Parameters
@@ -142,13 +149,16 @@ def maps(outdir, overwrite):
             queue += getQueue(a, pneuron, Fdrive, amps, tstim, toffset, PRF, DCs, fs, 'sonic',
                               outputdir=suboutdir, overwrite=overwrite)
 
-    # Return batch object
-    return Batch(init_sim_save, queue)
+    return queue
 
 
 def thresholds(outdir, overwrite):
-    ''' Duty-cycle-dpendent excitation threshold amplitudes of several neurons for various
-        US frequencies and sonophore radii.
+    ''' Define simulations queue for the strength-DC curves (excitation threshold amplitudes
+        as function of DC) of several neurons for various US frequencies and sonophore radii.
+
+        :param outdir: simulations output directory
+        :param overwrite: boolean stating whether or not overwrite existing files
+        :return: simulation batch queue
     '''
 
     # Parameters
@@ -180,12 +190,17 @@ def thresholds(outdir, overwrite):
             queue += getQueue(x, pneuron, Fdrive, None, tstim, toffset, PRF, DCs, fs, 'sonic',
                               outputdir=suboutdir, overwrite=overwrite)
 
-    # Return batch object
-    return Batch(init_sim_save, queue)
+    return queue
 
 
 def STN(outdir, overwrite):
-    ''' Behavior of the STN neuron under CW sonication for various amplitudes. '''
+    ''' Define simulations queue for the amplitude-dependent firing rate temporal profiles
+        of the STN neuron under CW sonication.
+
+        :param outdir: simulations output directory
+        :param overwrite: boolean stating whether or not overwrite existing files
+        :return: simulation batch queue
+    '''
 
     # Parameters
     pneuron = getPointNeuron('STN')
@@ -204,47 +219,57 @@ def STN(outdir, overwrite):
     amps = Intensity2Pressure(intensities)  # Pa
 
     # Span low-intensity range
-    queue = getQueue(a, pneuron, Fdrive, amps, tstim, toffset, PRF, DC, fs, 'sonic',
-                     outputdir=outdir, overwrite=overwrite)
-
-    # Return batch object
-    return Batch(init_sim_save, queue)
+    return getQueue(a, pneuron, Fdrive, amps, tstim, toffset, PRF, DC, fs, 'sonic',
+                    outputdir=outdir, overwrite=overwrite)
 
 
-def fill(text, char='-', totlength=100):
-    ndashes = totlength - len(text) - 2
-    nside = ndashes // 2
-    nleft, nright = nside, nside
-    if ndashes % 2 == 1:
-        nright += 1
-    return f'{char * nleft} {text} {char * nright}'
+def main():
 
-
-if __name__ == '__main__':
-
-    # Global parameters
-    loglevel = logging.INFO
-    logger.setLevel(loglevel)
-    funcs = [comparisons, maps, thresholds, STN]
-    mpi = True
-    overwrite = False
-    data_root = selectDirDialog(title='Select data root directory')
+    parser = Parser()
+    parser.addMPI()
+    parser.addOverwrite()
+    args = parser.parse()
+    logger.setLevel(args['loglevel'])
+    try:
+        data_root = selectDirDialog(title='Select data root directory')
+    except ValueError as err:
+        logger.error(err)
+        return
 
     logger.info('Creating output sub-directories')
+    funcs = [comparisons, maps, thresholds, STN]
     outdirs = [os.path.join(data_root, func.__name__) for func in funcs]
     for outdir in outdirs:
         if not os.path.isdir(outdir):
             os.mkdir(outdir)
 
-    logger.info(f'Defining job batches')
-    batches = {}
+    logger.info(f'Defining batch queues')
+    answer = input(f'Print details? (y/n):\n')
+    print_details = answer in ('y', 'Y', 'yes', 'Yes')
+    queue = []
     for func, outdir in zip(funcs, outdirs):
-        batches[func.__name__] = func(outdir, overwrite)
+        func_queue = func(outdir, args['overwrite'])
+        queue_str = f'{func.__name__} ({len(func_queue)} simulations)'
+        if print_details:
+            print(fillLine(queue_str))
+            for item in func_queue:
+                print(item[0])
+        else:
+            logger.info(queue_str)
+        queue += func_queue
 
-    logger.info(f'Running batches to generate data')
-    output = []
-    for name, batch in batches.items():
-        logger.info(fill(f'{name} ({len(batch.queue)} jobs)'))
-        output += batch.run(mpi=mpi, loglevel=loglevel)
+    njobs = len(queue)
+    answer = input(f'Run {njobs} simulations batch? (y/n):\n')
+    if answer not in ('y', 'Y', 'yes', 'Yes'):
+        logger.error(f'Canceling simulations batch')
+        return
+    logger.info(f'Running {njobs} simulations batch')
+    batch = Batch(init_sim_save, queue)
+    filepaths = batch.run(mpi=args['mpi'], loglevel=args['loglevel'])
+    filesizes = [os.path.getsize(x) for x in filepaths]
+    totsize = sum(filesizes)  # in bytes
+    logger.info(f'All {njobs} batches completed (total size: {si_format(totsize)}b)')
 
-    logger.info('All batches completed')
+
+if __name__ == '__main__':
+    main()
