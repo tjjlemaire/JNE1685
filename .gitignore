@@ -1,3 +1,6 @@
+# figs subfolder
+figs/
+
 # Sphinx tools and doc
 _build/
 _static/
