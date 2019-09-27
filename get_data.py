@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-06-06 18:38:04
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-09-27 16:26:05
+# @Last Modified time: 2019-09-27 16:40:55
 
 ''' Generate the data necessary to produce the paper figures. '''
 
@@ -26,6 +26,14 @@ def getQueue(a, pneuron, *sim_args, outputdir=None, overwrite=False):
     nbls = NeuronalBilayerSonophore(a, pneuron)
     queue = nbls.simQueue(*sim_args, outputdir=outputdir, overwrite=overwrite)
     return [([NeuronalBilayerSonophore, a, pneuron] + params[0], params[1]) for params in queue]
+
+
+def removeDuplicates(queue):
+    new_queue = []
+    for x in queue:
+        if x not in new_queue:
+            new_queue.append(x)
+    return new_queue
 
 
 def init_sim_save(cls, a, pneuron, *args, **kwargs):
@@ -96,7 +104,7 @@ def comparisons(outdir, overwrite):
         Athr = RS_Athr_vs_freq[Akey].loc[x * 1e-3]  # kPa
         queue += getQueue(a, pneuron, x, (Athr + 20.) * 1e3, tstim, toffset, PRF, DC, fs, methods,
                           outputdir=outdir, overwrite=overwrite)
-    for x in filter(lambda x: x != a, radii):
+    for x in radii:
         Athr = RS_Athr_vs_radius[Akey].loc[x * 1e9]  # kPa
         queue += getQueue(x, pneuron, Fdrive, (Athr + 20.) * 1e3, tstim, toffset, PRF, DC, fs, methods,
                           outputdir=outdir, overwrite=overwrite)
@@ -115,7 +123,7 @@ def comparisons(outdir, overwrite):
     queue += getQueue(a, pneuron, Fdrive, Adrive, tstim, toffset, PRFs, DC, fs, methods,
                       outputdir=outdir, overwrite=overwrite)
 
-    return queue
+    return removeDuplicates(queue)
 
 
 def maps(outdir, overwrite):
@@ -149,7 +157,7 @@ def maps(outdir, overwrite):
             queue += getQueue(a, pneuron, Fdrive, amps, tstim, toffset, PRF, DCs, fs, 'sonic',
                               outputdir=suboutdir, overwrite=overwrite)
 
-    return queue
+    return removeDuplicates(queue)
 
 
 def thresholds(outdir, overwrite):
@@ -190,7 +198,7 @@ def thresholds(outdir, overwrite):
             queue += getQueue(x, pneuron, Fdrive, None, tstim, toffset, PRF, DCs, fs, 'sonic',
                               outputdir=suboutdir, overwrite=overwrite)
 
-    return queue
+    return removeDuplicates(queue)
 
 
 def STN(outdir, overwrite):
