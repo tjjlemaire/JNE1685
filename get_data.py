@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-06-06 18:38:04
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-09-19 12:06:25
+# @Last Modified time: 2019-09-27 16:26:05
 
 ''' Generate the data necessary to produce the paper figures. '''
 
@@ -225,11 +225,16 @@ def STN(outdir, overwrite):
 
 def main():
 
+    # Functions dictionary
+    funcs = {func.__name__: func for func in [comparisons, maps, thresholds, STN]}
+
     parser = Parser()
     parser.addMPI()
+    parser.addSubset(list(funcs.keys()))
     parser.addOverwrite()
     args = parser.parse()
     logger.setLevel(args['loglevel'])
+    subset_funcs = {k: funcs[k] for k in args['subset']}
     try:
         data_root = selectDirDialog(title='Select data root directory')
     except ValueError as err:
@@ -237,8 +242,7 @@ def main():
         return
 
     logger.info('Creating output sub-directories')
-    funcs = [comparisons, maps, thresholds, STN]
-    outdirs = [os.path.join(data_root, func.__name__) for func in funcs]
+    outdirs = [os.path.join(data_root, k) for k in subset_funcs.keys()]
     for outdir in outdirs:
         if not os.path.isdir(outdir):
             os.mkdir(outdir)
@@ -247,9 +251,9 @@ def main():
     answer = input(f'Print details? (y/n):\n')
     print_details = answer in ('y', 'Y', 'yes', 'Yes')
     queue = []
-    for func, outdir in zip(funcs, outdirs):
+    for (k, func), outdir in zip(subset_funcs.items(), outdirs):
         func_queue = func(outdir, args['overwrite'])
-        queue_str = f'{func.__name__} ({len(func_queue)} simulations)'
+        queue_str = f'{k} ({len(func_queue)} simulations)'
         if print_details:
             print(fillLine(queue_str))
             for item in func_queue:
