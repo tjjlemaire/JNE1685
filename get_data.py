@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-06-06 18:38:04
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-09-30 15:54:08
+# @Last Modified time: 2019-09-30 20:22:39
 
 ''' Generate the data necessary to produce the paper figures. '''
 
@@ -16,6 +16,7 @@ from PySONIC.core import NeuronalBilayerSonophore, Batch
 from PySONIC.utils import *
 from PySONIC.neurons import getPointNeuron
 from PySONIC.parsers import Parser
+from ExSONIC.core import SonicNode, ExtendedSonicNode
 from utils import codes
 
 
@@ -149,7 +150,8 @@ def maps(outdir, overwrite):
 
 def thresholds(outdir, overwrite):
     ''' Define simulations queue for the strength-DC curves (excitation threshold amplitudes
-        as function of DC) of several neurons for various US frequencies and sonophore radii.
+        as function of DC) of several neurons for various US frequencies, sonophore radii and
+        pulse repetition frequencies.
 
         :param outdir: simulations output directory
         :param overwrite: boolean stating whether or not overwrite existing files
@@ -158,8 +160,6 @@ def thresholds(outdir, overwrite):
 
     # Parameters
     neurons = ['RS', 'LTS']
-    radii = np.array([16, 32, 64]) * 1e-9  # m
-    freqs = np.array([20, 500, 4000]) * 1e3  # Hz
     a = radii[1]
     Fdrive = freqs[1]
     tstim = 1.  # s
@@ -167,6 +167,11 @@ def thresholds(outdir, overwrite):
     PRF = 100.  # Hz
     fs = 1.
     DCs = np.arange(1, 101) * 1e-2
+
+    # Range parameters
+    radii = np.array([16, 32, 64]) * 1e-9  # m
+    freqs = np.array([20, 500, 4000]) * 1e3  # Hz
+    PRFs = np.array([10., 100., 1000.])  # Hz
 
     # Titrate over DC range for different US frequencies and sonophore radii
     queue = []
@@ -183,6 +188,12 @@ def thresholds(outdir, overwrite):
             if not os.path.isdir(suboutdir):
                 os.mkdir(suboutdir)
             queue += getQueue(x, pneuron, Fdrive, None, tstim, toffset, PRF, DCs, fs, 'sonic',
+                              outputdir=suboutdir, overwrite=overwrite)
+        for x in PRFs:
+            suboutdir = os.path.join(outdir, ' '.join(codes(a, pneuron, Fdrive, x, tstim)))
+            if not os.path.isdir(suboutdir):
+                os.mkdir(suboutdir)
+            queue += getQueue(a, pneuron, Fdrive, None, tstim, toffset, x, DCs, fs, 'sonic',
                               outputdir=suboutdir, overwrite=overwrite)
 
     return removeDuplicates(queue)
@@ -202,7 +213,7 @@ def STN(outdir, overwrite):
     a = 32e-9  # m
     Fdrive = 500e3  # Hz
     tstim = 1  # s
-    toffset = 0.  # s
+    toffset = 1.  # s
     PRF = 1e2
     DC = 1.
     fs = 1.
@@ -216,6 +227,55 @@ def STN(outdir, overwrite):
     # Span low-intensity range
     return getQueue(a, pneuron, Fdrive, amps, tstim, toffset, PRF, DC, fs, 'sonic',
                     outputdir=outdir, overwrite=overwrite)
+
+
+def coverage(outdir, overwrite):
+
+    # Stimulation parameters
+    pneuron = getPointNeuron('RS')
+    a = 32e-9       # m
+    Fdrive = 500e3  # Hz
+    tstim = 1000e-3  # s
+    toffset = 0e-3  # s
+    PRF = 100.0     # s
+    DC = 1.0
+    cov_range = np.linspace(0.01, 0.99, 99)
+    deff = 100e-9   # m
+    rs = 1e2        # Ohm.cm
+
+    # Determine naming convention for output files
+    fcode = 'Athr_vs_fs_{}s'.format(si_format(tstim, 0, space=''))
+    fs_key = 'fs (%)'
+    Athr_key = 'Athr (kPa)'
+    fpath_0D = os.path.join(outdir, f'{fcode}_0D.csv')
+    fpath_1D = os.path.join(outdir, f'{fcode}_1D.csv')
+
+    # Compute and save threshold amplitudes with point-neuron model
+    if overwrite or not os.path.isfile(fpath_0D):
+        logger.info('computing excitation thresholds with punctual model')
+        Athr0D = np.empty(cov_range.size)
+        for i, fs in enumerate(cov_range):
+            logger.info('computing threshold amplitude for fs = {:.0f}%'.format(fs * 1e2))
+            model = SonicNode(pneuron, a=a, Fdrive=Fdrive, fs=fs)
+            Athr0D[i] = model.titrate(tstim, toffset, PRF=PRF, DC=DC)
+            model.clear()
+        df = pd.DataFrame({fs_key: cov_range * 1e2, Athr_key: np.array(Athr0D) * 1e-3})
+        df.to_csv(fpath_0D, sep=',', index=False)
+
+    # Compute and save threshold amplitudes with compartmental neuron model
+    if overwrite or not os.path.isfile(fpath_0D):
+        logger.info('computing excitation thresholds with spatially-extended model')
+        Athr1D = np.empty(cov_range.size)
+        for i, fs in enumerate(cov_range):
+            logger.info('computing threshold amplitude for deff = {}m, fs = {:.0f}%'.format(
+                si_format(deff), fs * 1e2))
+            model = ExtendedSonicNode(pneuron, rs, a=a, Fdrive=Fdrive, fs=fs, deff=deff)
+            Athr1D[i] = model.titrate(tstim, toffset, PRF=PRF, DC=DC)
+            model.clear()
+        df = pd.DataFrame({fs_key: cov_range * 1e2, Athr_key: np.array(Athr1D) * 1e-3})
+        df.to_csv(fpath_1D, sep=',', index=False)
+
+    return []
 
 
 def main():

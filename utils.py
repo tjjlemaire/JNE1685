@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-10-01 20:45:29
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-09-30 19:23:52
+# @Last Modified time: 2019-09-30 20:26:03
 
 import os
 import numpy as np
@@ -15,7 +15,23 @@ from PySONIC.core import NeuronalBilayerSonophore
 from PySONIC.neurons import *
 from PySONIC.postpro import computeSpikingMetrics
 from PySONIC.plt import cm2inch, ActivationMap
-from ExSONIC.core import SonicNode, ExtendedSonicNode
+
+
+def codes(a, pneuron, Fdrive, PRF, tstim):
+    return [
+        pneuron.name,
+        f'{si_format(a, space="")}m',
+        f'{si_format(Fdrive, space="")}Hz',
+        f'PRF{si_format(PRF, space="")}Hz',
+        f'{si_format(tstim, space="")}s'
+    ]
+
+
+def prependTimeSeries(df, tonset):
+    df0 = pd.DataFrame([df.iloc[0]])
+    df = pd.concat([df0, df], ignore_index=True)
+    df['t'][0] = -tonset
+    return df
 
 
 def saveFigsAsPDF(figs, figindex):
@@ -26,60 +42,6 @@ def saveFigsAsPDF(figs, figindex):
         os.mkdir(figdir)
     for fname, fig in figs.items():
         fig.savefig(os.path.join(figdir, f'{figbase}{fname}.pdf'), transparent=True)
-
-
-def getCWtitrations_vs_Fdrive(neurons, a, freqs, tstim, toffset, fpath):
-    fkey = 'Fdrive (kHz)'
-    freqs = np.array(freqs)
-    if os.path.isfile(fpath):
-        df = pd.read_csv(fpath, sep=',', index_col=fkey)
-    else:
-        df = pd.DataFrame(index=freqs * 1e-3)
-    for neuron in neurons:
-        if neuron not in df:
-            pneuron = getPointNeuron(neuron)
-            nbls = NeuronalBilayerSonophore(a, pneuron)
-            for i, Fdrive in enumerate(freqs):
-                logger.info('Running CW titration for %s neuron @ %sHz',
-                            neuron, si_format(Fdrive))
-                Athr = nbls.titrate(Fdrive, tstim, toffset)  # Pa
-                df.loc[Fdrive * 1e-3, neuron] = Athr * 1e-3  # kPa
-    df.sort_index(inplace=True)
-    df.to_csv(fpath, sep=',', index_label=fkey)
-    return df
-
-
-def getAthr_vs_radius(pneuron, radii, Fdrive, tstim, toffset):
-    akey = 'radius (nm)'
-    radii = np.array(radii)
-    Athrs = np.array([NeuronalBilayerSonophore(a, pneuron).titrate(Fdrive, tstim, toffset) for a in radii])  # Pa
-    df = pd.DataFrame({akey: radii * 1e9, 'threshold amplitude (kPa)': Athrs * 1e-3})
-    df.set_index(akey, inplace=True)
-    return df
-
-
-def getSims(outdir, neuron, a, queue):
-    fpaths = []
-    updated_queue = []
-    pneuron = getPointNeuron(neuron)
-    nbls = NeuronalBilayerSonophore(a, pneuron)
-    for i, item in enumerate(queue):
-        Fdrive, Adrive, tstim, toffset, PRF, DC, fs, method = item
-        print(item)
-        fcode = nbls.filecode(Fdrive, Adrive, tstim, toffset, PRF, DC, fs, method)
-        fpath = os.path.join(outdir, '{}.pkl'.format(fcode))
-        if not os.path.isfile(fpath):
-            print(fpath, 'does not exist')
-            item.insert(0, outdir)
-            updated_queue.append(item)
-        fpaths.append(fpath)
-    if len(updated_queue) > 0:
-        print(updated_queue)
-        # pneuron = getPointNeuron(neuron)
-        # nbls = NeuronalBilayerSonophore(a, pneuron)
-        # batch = Batch(nbls.run, updated_queue)
-        # batch.run(mpi=True)
-    return fpaths
 
 
 def getSpikingMetrics(xvar, xkey, data_fpaths, metrics_fpath):
@@ -257,16 +219,6 @@ def plotMapAndTraces(inputdir, pneuron, a, Fdrive, tstim, toffset, amps, PRF, DC
     return figs
 
 
-def codes(a, pneuron, Fdrive, PRF, tstim):
-    return [
-        pneuron.name,
-        f'{si_format(a, space="")}m',
-        f'{si_format(Fdrive, space="")}Hz',
-        f'PRF{si_format(PRF, space="")}Hz',
-        f'{si_format(tstim, space="")}s'
-    ]
-
-
 def plotThresholdAmps(pneurons, radii, freqs, tstim, toffset, PRF, DCs, cov,
                       fs=10, colors=None, figsize=cm2inch(10, 8)):
     ''' Plot threshold excitation amplitudes of several neurons determined by titration procedures,
@@ -317,47 +269,3 @@ def plotThresholdAmps(pneurons, radii, freqs, tstim, toffset, PRF, DCs, cov,
     ax.legend(fontsize=fs - 2, frameon=False)
     fig.tight_layout()
     return fig
-
-
-def computeAthr0D(pneuron, a, Fdrive, tstim, toffset, PRF, DC, fs_range):
-    Athr = np.empty(fs_range.size)
-    for i, fs in enumerate(fs_range):
-        logger.info('computing threshold amplitude for fs = {:.0f}%'.format(fs * 1e2))
-        model = SonicNode(pneuron, a=a, Fdrive=Fdrive, fs=fs)
-        Athr[i] = model.titrate(tstim, toffset, PRF=PRF, DC=DC)
-        model.clear()
-    return Athr
-
-
-def computeAthr1D(pneuron, a, Fdrive, tstim, toffset, PRF, DC, rs, deff, fs_range):
-    Athr = np.empty(fs_range.size)
-    for i, fs in enumerate(fs_range):
-        logger.info('computing threshold amplitude for deff = {}m, fs = {:.0f}%'.format(
-            si_format(deff), fs * 1e2))
-        model = ExtendedSonicNode(pneuron, rs, a=a, Fdrive=Fdrive, fs=fs, deff=deff)
-        Athr[i] = model.titrate(tstim, toffset, PRF=PRF, DC=DC)
-        model.clear()
-    return Athr
-
-
-def getAthrData(fpath, func, args, fs_range):
-    fs_key = 'fs (%)'
-    Athr_key = 'Athr (kPa)'
-    if os.path.isfile(fpath):
-        logger.info('loading data from file: "{}"'.format(fpath))
-        df = pd.read_csv(fpath, sep=',')
-        assert np.allclose(df[fs_key].values, fs_range * 1e2), 'fs range not matching'
-        Athr = df[Athr_key].values
-    else:
-        logger.info('computing data')
-        Athr = func(*args, fs_range)
-        df = pd.DataFrame({fs_key: fs_range * 1e2, Athr_key: Athr})
-        df.to_csv(fpath, sep=',', index=False)
-    return Athr
-
-
-def prependTimeSeries(df, tonset):
-    df0 = pd.DataFrame([df.iloc[0]])
-    df = pd.concat([df0, df], ignore_index=True)
-    df['t'][0] = -tonset
-    return df
