@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-06-06 18:38:04
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-09-30 20:22:39
+# @Last Modified time: 2019-09-30 20:39:24
 
 ''' Generate the data necessary to produce the paper figures. '''
 
@@ -158,6 +158,11 @@ def thresholds(outdir, overwrite):
         :return: simulation batch queue
     '''
 
+    # Range parameters
+    radii = np.array([16, 32, 64]) * 1e-9  # m
+    freqs = np.array([20, 500, 4000]) * 1e3  # Hz
+    PRFs = np.array([10., 100., 1000.])  # Hz
+
     # Parameters
     neurons = ['RS', 'LTS']
     a = radii[1]
@@ -168,10 +173,6 @@ def thresholds(outdir, overwrite):
     fs = 1.
     DCs = np.arange(1, 101) * 1e-2
 
-    # Range parameters
-    radii = np.array([16, 32, 64]) * 1e-9  # m
-    freqs = np.array([20, 500, 4000]) * 1e3  # Hz
-    PRFs = np.array([10., 100., 1000.])  # Hz
 
     # Titrate over DC range for different US frequencies and sonophore radii
     queue = []
@@ -263,7 +264,7 @@ def coverage(outdir, overwrite):
         df.to_csv(fpath_0D, sep=',', index=False)
 
     # Compute and save threshold amplitudes with compartmental neuron model
-    if overwrite or not os.path.isfile(fpath_0D):
+    if overwrite or not os.path.isfile(fpath_1D):
         logger.info('computing excitation thresholds with spatially-extended model')
         Athr1D = np.empty(cov_range.size)
         for i, fs in enumerate(cov_range):
@@ -281,7 +282,7 @@ def coverage(outdir, overwrite):
 def main():
 
     # Functions dictionary
-    funcs = {func.__name__: func for func in [comparisons, maps, thresholds, STN]}
+    funcs = {func.__name__: func for func in [comparisons, maps, thresholds, STN, coverage]}
 
     parser = Parser()
     parser.addMPI()
