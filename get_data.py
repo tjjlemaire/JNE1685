@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-06-06 18:38:04
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-09-27 16:40:55
+# @Last Modified time: 2019-09-30 15:54:08
 
 ''' Generate the data necessary to produce the paper figures. '''
 
@@ -16,6 +16,7 @@ from PySONIC.core import NeuronalBilayerSonophore, Batch
 from PySONIC.utils import *
 from PySONIC.neurons import getPointNeuron
 from PySONIC.parsers import Parser
+from utils import codes
 
 
 def getQueue(a, pneuron, *sim_args, outputdir=None, overwrite=False):
@@ -38,16 +39,6 @@ def removeDuplicates(queue):
 
 def init_sim_save(cls, a, pneuron, *args, **kwargs):
     return cls(a, pneuron).simAndSave(*args, **kwargs)
-
-
-def codes(a, pneuron, Fdrive, PRF, tstim):
-    return [
-        pneuron.name,
-        f'{si_format(a, space="")}m',
-        f'{si_format(Fdrive, space="")}Hz',
-        f'PRF{si_format(PRF, space="")}Hz',
-        f'{si_format(tstim, space="")}s'
-    ]
 
 
 def comparisons(outdir, overwrite):
@@ -86,10 +77,6 @@ def comparisons(outdir, overwrite):
     RS_Athr_vs_radius = pd.DataFrame(
         data={Akey: np.array([NeuronalBilayerSonophore(x, pneuron).titrate(Fdrive, tstim, toffset) * 1e-3 for x in radii])},
         index=radii * 1e9)
-    RS_Athr_vs_freq.to_csv(
-        os.path.join(outdir, f'{pneuron.name}_Athr_vs_freq.csv'), index_label='Fdrive (kHz)')
-    RS_Athr_vs_radius.to_csv(
-        os.path.join(outdir, f'{pneuron.name}_Athr_vs_radius.csv'), index_label='radius (nm)')
 
     # Initialize queue
     queue = []
