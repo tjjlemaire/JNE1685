@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-06-06 18:38:04
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-10-01 11:46:58
+# @Last Modified time: 2019-10-01 12:51:31
 
 ''' Generate the data necessary to produce the paper figures. '''
 
@@ -359,7 +359,7 @@ def main():
     # Compute total size of created files
     filepaths = []
     for out in outputs:
-        if os.path.isfile(out):
+        if isinstance(out, str) and os.path.isfile(out):
             filepaths.append(out)
     filesizes = [os.path.getsize(x) for x in filepaths]
     totsize = sum(filesizes)  # in bytes
