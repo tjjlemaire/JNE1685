@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-10-01 20:45:29
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-09-30 20:26:03
+# @Last Modified time: 2019-10-01 10:11:31
 
 import os
 import numpy as np
@@ -189,7 +189,7 @@ def getLookupsCompTime(pneuron):
 
 def plotMapAndTraces(inputdir, pneuron, a, Fdrive, tstim, toffset, amps, PRF, DCs, cov,
                      FRbounds=None, insets=None, tbounds=None, Vbounds=None, thresholds=True,
-                     map_figsize=None, trace_figsize=None, fs=8):
+                     map_figsize=None, trace_figsize=None, fs=8, lw=1):
 
     mapcodes = codes(a, pneuron, Fdrive, PRF, tstim)
     subdir = os.path.join(inputdir, ' '.join(mapcodes))
@@ -202,7 +202,7 @@ def plotMapAndTraces(inputdir, pneuron, a, Fdrive, tstim, toffset, amps, PRF, DC
     if insets is not None:
         DC_insets, A_insets = zip(*insets)
         ax.scatter(np.array(DC_insets) * 1e2, np.array(A_insets) * 1e-3,
-                   s=80, facecolors='none', edgecolors='k', linestyle='--')
+                   s=80, facecolors='none', edgecolors='k', linestyle='--', lw=lw)
     figs['map_' + '_'.join(mapcodes)] = mapfig
 
     # Related inset traces

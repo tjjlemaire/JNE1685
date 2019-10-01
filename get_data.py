@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-06-06 18:38:04
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-09-30 20:39:24
+# @Last Modified time: 2019-10-01 11:46:58
 
 ''' Generate the data necessary to produce the paper figures. '''
 
@@ -21,16 +21,25 @@ from utils import codes
 
 
 def getQueue(a, pneuron, *sim_args, outputdir=None, overwrite=False):
+    ''' Build a simulation queue from input arguments, including those for model instantiation. '''
     sim_args = list(sim_args)
     for i, arg in enumerate(sim_args):
         if arg is not None and not isIterable(arg):
             sim_args[i] = [arg]
     nbls = NeuronalBilayerSonophore(a, pneuron)
-    queue = nbls.simQueue(*sim_args, outputdir=outputdir, overwrite=overwrite)
-    return [([NeuronalBilayerSonophore, a, pneuron] + params[0], params[1]) for params in queue]
+    sim_queue = nbls.simQueue(*sim_args, outputdir=outputdir, overwrite=overwrite)
+    queue = []
+    for item in sim_queue:
+        if isinstance(item, tuple) and len(item) == 2:
+            queue.append(([NeuronalBilayerSonophore, a, pneuron] + item[0], item[1]))
+        else:
+            item.remove(None)
+            queue.append([NeuronalBilayerSonophore, a, pneuron] + item)
+    return queue
 
 
 def removeDuplicates(queue):
+    ''' Remove duplicates in a queue. '''
     new_queue = []
     for x in queue:
         if x not in new_queue:
@@ -38,8 +47,30 @@ def removeDuplicates(queue):
     return new_queue
 
 
+def init_titrate(cls, a, pneuron, *args, **kwargs):
+    ''' Initialize model and run titration to compute threshold exictation amplitude.
+        The result will be automatically added to the titrations log, such that it does
+        not need to be run again.
+    '''
+    cls(a, pneuron).titrate(*args, **kwargs)
+
+
 def init_sim_save(cls, a, pneuron, *args, **kwargs):
+    ''' Initialize model, run simulation and save results in output file. '''
     return cls(a, pneuron).simAndSave(*args, **kwargs)
+
+
+def getCovDepAthr(pneuron, a, Fdrive, fs, tstim, toffset, PRF, DC, rs=None, deff=None):
+    if rs is None:
+        logger.info('computing threshold amplitude for fs = {:.0f}%'.format(fs * 1e2))
+        model = SonicNode(pneuron, a=a, Fdrive=Fdrive, fs=fs)
+    else:
+        logger.info('computing threshold amplitude for deff = {}m, fs = {:.0f}%'.format(
+            si_format(deff), fs * 1e2))
+        model = ExtendedSonicNode(pneuron, rs, a=a, Fdrive=Fdrive, fs=fs, deff=deff)
+    Athr = model.titrate(tstim, toffset, PRF=PRF, DC=DC)
+    model.clear()
+    return Athr
 
 
 def comparisons(outdir, overwrite):
@@ -111,7 +142,11 @@ def comparisons(outdir, overwrite):
     queue += getQueue(a, pneuron, Fdrive, Adrive, tstim, toffset, PRFs, DC, fs, methods,
                       outputdir=outdir, overwrite=overwrite)
 
-    return removeDuplicates(queue)
+    # Remove duplicates in queue
+    queue = removeDuplicates(queue)
+
+    # Return queue with appropriate function object and mpi boolean
+    return init_sim_save, queue, True
 
 
 def maps(outdir, overwrite):
@@ -145,7 +180,11 @@ def maps(outdir, overwrite):
             queue += getQueue(a, pneuron, Fdrive, amps, tstim, toffset, PRF, DCs, fs, 'sonic',
                               outputdir=suboutdir, overwrite=overwrite)
 
-    return removeDuplicates(queue)
+    # Remove duplicates in queue
+    queue = removeDuplicates(queue)
+
+    # Return queue with appropriate function object and mpi boolean
+    return init_sim_save, queue, True
 
 
 def thresholds(outdir, overwrite):
@@ -153,8 +192,6 @@ def thresholds(outdir, overwrite):
         as function of DC) of several neurons for various US frequencies, sonophore radii and
         pulse repetition frequencies.
 
-        :param outdir: simulations output directory
-        :param overwrite: boolean stating whether or not overwrite existing files
         :return: simulation batch queue
     '''
 
@@ -173,31 +210,22 @@ def thresholds(outdir, overwrite):
     fs = 1.
     DCs = np.arange(1, 101) * 1e-2
 
-
     # Titrate over DC range for different US frequencies and sonophore radii
     queue = []
     for neuron in neurons:
         pneuron = getPointNeuron(neuron)
         for x in freqs:
-            suboutdir = os.path.join(outdir, ' '.join(codes(a, pneuron, x, PRF, tstim)))
-            if not os.path.isdir(suboutdir):
-                os.mkdir(suboutdir)
-            queue += getQueue(a, pneuron, x, None, tstim, toffset, PRF, DCs, fs, 'sonic',
-                              outputdir=suboutdir, overwrite=overwrite)
+            queue += getQueue(a, pneuron, x, None, tstim, toffset, PRF, DCs, fs, 'sonic')
         for x in radii:
-            suboutdir = os.path.join(outdir, ' '.join(codes(x, pneuron, Fdrive, PRF, tstim)))
-            if not os.path.isdir(suboutdir):
-                os.mkdir(suboutdir)
-            queue += getQueue(x, pneuron, Fdrive, None, tstim, toffset, PRF, DCs, fs, 'sonic',
-                              outputdir=suboutdir, overwrite=overwrite)
+            queue += getQueue(x, pneuron, Fdrive, None, tstim, toffset, PRF, DCs, fs, 'sonic')
         for x in PRFs:
-            suboutdir = os.path.join(outdir, ' '.join(codes(a, pneuron, Fdrive, x, tstim)))
-            if not os.path.isdir(suboutdir):
-                os.mkdir(suboutdir)
-            queue += getQueue(a, pneuron, Fdrive, None, tstim, toffset, x, DCs, fs, 'sonic',
-                              outputdir=suboutdir, overwrite=overwrite)
+            queue += getQueue(a, pneuron, Fdrive, None, tstim, toffset, x, DCs, fs, 'sonic')
 
-    return removeDuplicates(queue)
+    # Remove duplicates in queue
+    queue = removeDuplicates(queue)
+
+    # Return queue with appropriate function object and mpi boolean
+    return init_titrate, queue, True
 
 
 def STN(outdir, overwrite):
@@ -226,8 +254,14 @@ def STN(outdir, overwrite):
     amps = Intensity2Pressure(intensities)  # Pa
 
     # Span low-intensity range
-    return getQueue(a, pneuron, Fdrive, amps, tstim, toffset, PRF, DC, fs, 'sonic',
-                    outputdir=outdir, overwrite=overwrite)
+    queue = getQueue(a, pneuron, Fdrive, amps, tstim, toffset, PRF, DC, fs, 'sonic',
+                     outputdir=outdir, overwrite=overwrite)
+
+    # Remove duplicates in queue
+    queue = removeDuplicates(queue)
+
+    # Return queue with appropriate function object and mpi boolean
+    return init_sim_save, queue, True
 
 
 def coverage(outdir, overwrite):
@@ -244,39 +278,13 @@ def coverage(outdir, overwrite):
     deff = 100e-9   # m
     rs = 1e2        # Ohm.cm
 
-    # Determine naming convention for output files
-    fcode = 'Athr_vs_fs_{}s'.format(si_format(tstim, 0, space=''))
-    fs_key = 'fs (%)'
-    Athr_key = 'Athr (kPa)'
-    fpath_0D = os.path.join(outdir, f'{fcode}_0D.csv')
-    fpath_1D = os.path.join(outdir, f'{fcode}_1D.csv')
+    # Compute threshold amplitudes with both punctual and compartmental neuron models
+    queue0D = [[pneuron, a, Fdrive, fs, tstim, toffset, PRF, DC, None, None] for fs in cov_range]
+    queue1D = [[pneuron, a, Fdrive, fs, tstim, toffset, PRF, DC, rs, deff] for fs in cov_range]
+    queue = queue0D + queue1D
 
-    # Compute and save threshold amplitudes with point-neuron model
-    if overwrite or not os.path.isfile(fpath_0D):
-        logger.info('computing excitation thresholds with punctual model')
-        Athr0D = np.empty(cov_range.size)
-        for i, fs in enumerate(cov_range):
-            logger.info('computing threshold amplitude for fs = {:.0f}%'.format(fs * 1e2))
-            model = SonicNode(pneuron, a=a, Fdrive=Fdrive, fs=fs)
-            Athr0D[i] = model.titrate(tstim, toffset, PRF=PRF, DC=DC)
-            model.clear()
-        df = pd.DataFrame({fs_key: cov_range * 1e2, Athr_key: np.array(Athr0D) * 1e-3})
-        df.to_csv(fpath_0D, sep=',', index=False)
-
-    # Compute and save threshold amplitudes with compartmental neuron model
-    if overwrite or not os.path.isfile(fpath_1D):
-        logger.info('computing excitation thresholds with spatially-extended model')
-        Athr1D = np.empty(cov_range.size)
-        for i, fs in enumerate(cov_range):
-            logger.info('computing threshold amplitude for deff = {}m, fs = {:.0f}%'.format(
-                si_format(deff), fs * 1e2))
-            model = ExtendedSonicNode(pneuron, rs, a=a, Fdrive=Fdrive, fs=fs, deff=deff)
-            Athr1D[i] = model.titrate(tstim, toffset, PRF=PRF, DC=DC)
-            model.clear()
-        df = pd.DataFrame({fs_key: cov_range * 1e2, Athr_key: np.array(Athr1D) * 1e-3})
-        df.to_csv(fpath_1D, sep=',', index=False)
-
-    return []
+    # Return queue with appropriate function object and mpi boolean
+    return getCovDepAthr, queue, False
 
 
 def main():
@@ -284,6 +292,7 @@ def main():
     # Functions dictionary
     funcs = {func.__name__: func for func in [comparisons, maps, thresholds, STN, coverage]}
 
+    # Parse command line arguments
     parser = Parser()
     parser.addMPI()
     parser.addSubset(list(funcs.keys()))
@@ -291,44 +300,72 @@ def main():
     args = parser.parse()
     logger.setLevel(args['loglevel'])
     subset_funcs = {k: funcs[k] for k in args['subset']}
+
+    # Select data root directory
     try:
         data_root = selectDirDialog(title='Select data root directory')
     except ValueError as err:
         logger.error(err)
         return
 
+    # Create required sub-directories
     logger.info('Creating output sub-directories')
     outdirs = [os.path.join(data_root, k) for k in subset_funcs.keys()]
     for outdir in outdirs:
         if not os.path.isdir(outdir):
             os.mkdir(outdir)
 
-    logger.info(f'Defining batch queues')
+    # Define batch objects from functions
+    logger.info(f'Defining batches')
     answer = input(f'Print details? (y/n):\n')
     print_details = answer in ('y', 'Y', 'yes', 'Yes')
-    queue = []
+    batches, with_mpi = [], []
     for (k, func), outdir in zip(subset_funcs.items(), outdirs):
-        func_queue = func(outdir, args['overwrite'])
-        queue_str = f'{k} ({len(func_queue)} simulations)'
+        batch_func, batch_queue, allows_mpi = func(outdir, args['overwrite'])
+        queue_str = f'{k} ({len(batch_queue)} simulations)'
         if print_details:
             print(fillLine(queue_str))
-            for item in func_queue:
-                print(item[0])
+            for item in batch_queue:
+                if isinstance(item, tuple) and len(item) == 2:
+                    print(item[0])
+                else:
+                    print(item)
         else:
             logger.info(queue_str)
-        queue += func_queue
+        is_new_func = True
+        for batch in batches:
+            if batch.func == batch_func:
+                batch.queue += batch_queue
+                is_new_func = False
+                break
+        if is_new_func:
+            batches.append(Batch(batch_func, batch_queue))
+            with_mpi.append(allows_mpi)
 
-    njobs = len(queue)
-    answer = input(f'Run {njobs} simulations batch? (y/n):\n')
+    # Require user approval
+    nbatches = len(batches)
+    njobs = sum(len(batch.queue) for batch in batches)
+    answer = input(f'Run {nbatches} batches with {njobs} simulations in total ? (y/n):\n')
     if answer not in ('y', 'Y', 'yes', 'Yes'):
         logger.error(f'Canceling simulations batch')
         return
-    logger.info(f'Running {njobs} simulations batch')
-    batch = Batch(init_sim_save, queue)
-    filepaths = batch.run(mpi=args['mpi'], loglevel=args['loglevel'])
+
+    # Run batches
+    logger.info(f'Starting batches')
+    outputs = []
+    for batch, allows_mpi in zip(batches, with_mpi):
+        outputs += batch.run(mpi=args['mpi'] and allows_mpi, loglevel=args['loglevel'])
+
+    # Compute total size of created files
+    filepaths = []
+    for out in outputs:
+        if os.path.isfile(out):
+            filepaths.append(out)
     filesizes = [os.path.getsize(x) for x in filepaths]
     totsize = sum(filesizes)  # in bytes
-    logger.info(f'All {njobs} batches completed (total size: {si_format(totsize)}b)')
+
+    # Log upon termination
+    logger.info(f'All {njobs} batches completed (total disk size: {si_format(totsize)}b)')
 
 
 if __name__ == '__main__':
