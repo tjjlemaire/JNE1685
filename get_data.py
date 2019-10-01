@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-06-06 18:38:04
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-10-01 12:51:31
+# @Last Modified time: 2019-10-01 14:25:10
 
 ''' Generate the data necessary to produce the paper figures. '''
 
@@ -11,6 +11,7 @@ import os
 import logging
 import numpy as np
 import pandas as pd
+from inspect import signature
 
 from PySONIC.core import NeuronalBilayerSonophore, Batch
 from PySONIC.utils import *
@@ -79,7 +80,7 @@ def comparisons(outdir, overwrite):
 
         :param outdir: simulations output directory
         :param overwrite: boolean stating whether or not overwrite existing files
-        :return: simulation batch queue
+        :return: 3-tuple with batch function, batch queue and mpi boolean
     '''
 
     # Parameters
@@ -155,7 +156,7 @@ def maps(outdir, overwrite):
 
         :param outdir: simulations output directory
         :param overwrite: boolean stating whether or not overwrite existing files
-        :return: simulation batch queue
+        :return: 3-tuple with batch function, batch queue and mpi boolean
     '''
 
     # Parameters
@@ -187,12 +188,12 @@ def maps(outdir, overwrite):
     return init_sim_save, queue, True
 
 
-def thresholds(outdir, overwrite):
+def thresholds():
     ''' Define simulations queue for the strength-DC curves (excitation threshold amplitudes
         as function of DC) of several neurons for various US frequencies, sonophore radii and
         pulse repetition frequencies.
 
-        :return: simulation batch queue
+        :return: 3-tuple with batch function, batch queue and mpi boolean
     '''
 
     # Range parameters
@@ -234,7 +235,7 @@ def STN(outdir, overwrite):
 
         :param outdir: simulations output directory
         :param overwrite: boolean stating whether or not overwrite existing files
-        :return: simulation batch queue
+        :return: 3-tuple with batch function, batch queue and mpi boolean
     '''
 
     # Parameters
@@ -264,7 +265,12 @@ def STN(outdir, overwrite):
     return init_sim_save, queue, True
 
 
-def coverage(outdir, overwrite):
+def coverage():
+    ''' Define sonophore coverage fraction dependent titration procedures for the punctual
+        and nanoscale spatially-extended SONIC models.
+
+        :return: 3-tuple with batch function, batch queue and mpi boolean
+    '''
 
     # Stimulation parameters
     pneuron = getPointNeuron('RS')
@@ -298,8 +304,11 @@ def main():
     parser.addSubset(list(funcs.keys()))
     parser.addOverwrite()
     args = parser.parse()
-    logger.setLevel(args['loglevel'])
+    loglevel = args['loglevel']
+    overwrite = args['overwrite']
+    mpi = args['mpi']
     subset_funcs = {k: funcs[k] for k in args['subset']}
+    logger.setLevel(loglevel)
 
     # Select data root directory
     try:
@@ -308,20 +317,31 @@ def main():
         logger.error(err)
         return
 
-    # Create required sub-directories
-    logger.info('Creating output sub-directories')
-    outdirs = [os.path.join(data_root, k) for k in subset_funcs.keys()]
-    for outdir in outdirs:
-        if not os.path.isdir(outdir):
-            os.mkdir(outdir)
-
     # Define batch objects from functions
     logger.info(f'Defining batches')
     answer = input(f'Print details? (y/n):\n')
     print_details = answer in ('y', 'Y', 'yes', 'Yes')
     batches, with_mpi = [], []
-    for (k, func), outdir in zip(subset_funcs.items(), outdirs):
-        batch_func, batch_queue, allows_mpi = func(outdir, args['overwrite'])
+    for k, func in subset_funcs.items():
+        # Determine function parameters
+        params = []
+        sig_params = list(signature(func).parameters.keys())
+
+        # Add output directory if required, checking for existence and creating it if needed
+        if 'outdir' in sig_params:
+            outdir = os.path.join(data_root, k)
+            if not os.path.isdir(outdir):
+                os.mkdir(outdir)
+            params.append(outdir)
+
+        # Add overwrite argument if required
+        if 'overwrite' in sig_params:
+            params.append(overwrite)
+
+        # Extract batch information
+        batch_func, batch_queue, allows_mpi = func(*params)
+
+        # Print information about batch queue
         queue_str = f'{k} ({len(batch_queue)} simulations)'
         if print_details:
             print(fillLine(queue_str))
@@ -332,17 +352,21 @@ def main():
                     print(item)
         else:
             logger.info(queue_str)
+
+        # Merge with other batch if function is identical
         is_new_func = True
         for batch in batches:
             if batch.func == batch_func:
                 batch.queue += batch_queue
                 is_new_func = False
                 break
+
+        # Otherwise create new batch object
         if is_new_func:
             batches.append(Batch(batch_func, batch_queue))
             with_mpi.append(allows_mpi)
 
-    # Require user approval
+    # Request user approval before starting batches
     nbatches = len(batches)
     njobs = sum(len(batch.queue) for batch in batches)
     answer = input(f'Run {nbatches} batches with {njobs} simulations in total ? (y/n):\n')
@@ -354,7 +378,7 @@ def main():
     logger.info(f'Starting batches')
     outputs = []
     for batch, allows_mpi in zip(batches, with_mpi):
-        outputs += batch.run(mpi=args['mpi'] and allows_mpi, loglevel=args['loglevel'])
+        outputs += batch.run(mpi=mpi and allows_mpi, loglevel=loglevel)
 
     # Compute total size of created files
     filepaths = []

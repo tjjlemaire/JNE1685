@@ -29,13 +29,24 @@ Check out the PySONIC and ExSONIC repositories for more instructions on how to i
 
 Before generating the figures, one must obtain the required dataset resulting from cumbersome model simulations. 
 
-In order to generate that data from scratch, you can use the `get_data.py` script, with the `mpi` option to enable multiprocessing: 
+In order to generate that data from scratch, you can use the `get_data.py` script. 
+
+Be aware that the **cumulated computation time required to run all simulations can easily exceed 1 week**, and that the **total size of entire dataset size is about 112 GB**. Therefore, it is highly advised that you run that script on a **high-performance, multi-core machine with enough disk space**, with the `mpi` option to enable multiprocessing:
 
 ```
 python get_data.py --mpi
 ```
 
-Be aware that the **cumulated computation time required to run all simulations can easily exceed 1 week**, and that the **total size of entire dataset size is about 104 GB**. Therefore, it is highly advised that you run that script on a **high-performance, multi-core machine with enough disk space**.
+You will be asked to provide the necessary information in order to run the batches:
+- A dialog box will open, asking you to choose an output directory.
+- You will then be prompted to choose whether or not to display details about the simulation batches to be defined. Answer by yes (`y`) or no (`n`)
+- Once simulation batches are defined, you will be prompted a last question asking whether or not to run the batches. If you are ready to run the batch, answer yes (`y`).
+
+The generated dataset should be split between 3 sub-folders in the indicated output directory:
+- *comparisons*
+- *maps*
+- *STN*
+
 
 If you don't want to generate the data from scratch, you can download it from the following link:
 
@@ -50,11 +61,11 @@ To generate a figure:
 `$ jupyter lab`
 
 - open the figure notebook
-- start running the notebook cell by cell (using Shift + Enter)
-- if required, enter an input directory to inform about where the data is located (follow the indications)
-- complete the notebook execution, using the command: *Run -> Run Selected Cell and All Below*
+- select all the cells (`Ctrl` + `A`) and run them (`Ctrl` + `Enter`)
+- for the notebooks of figures 5, 6, 7 and 9, you will be prompted to enter the path to the input directory where the data is located (follow the indications indicated in the notebook)
+- wait for the complete notebook execution
 
-The figures panels should appear in the notebook. Additionally, they will be saved as PDFs in a *figs* sub-folder. 
+Upon completion, the figures panels should appear in the notebook. Additionally, they will be saved as PDFs in a *figs* sub-folder. 
 
 # Authors
 
