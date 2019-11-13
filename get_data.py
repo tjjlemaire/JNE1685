@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-06-06 18:38:04
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-10-01 14:25:10
+# @Last Modified time: 2019-11-13 13:02:30
 
 ''' Generate the data necessary to produce the paper figures. '''
 
@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from inspect import signature
 
-from PySONIC.core import NeuronalBilayerSonophore, Batch
+from PySONIC.core import NeuronalBilayerSonophore, Batch, PulsedProtocol
 from PySONIC.utils import *
 from PySONIC.neurons import getPointNeuron
 from PySONIC.parsers import Parser
@@ -101,14 +101,16 @@ def comparisons(outdir, overwrite):
     LTS = getPointNeuron('LTS')
 
     # Get RS neuron threshold amplitudes as as function of US frequency and sonophore radius
+    pp = PulsedProtocol(tstim, toffset, PRF, DC)
     pneuron = RS
     nbls = NeuronalBilayerSonophore(a, pneuron)
     Akey = 'Athr (kPa)'
     RS_Athr_vs_freq = pd.DataFrame(
-        data={Akey: np.array([nbls.titrate(x, tstim, toffset) * 1e-3 for x in freqs])},
+        data={Akey: np.array([nbls.titrate(x, pp) * 1e-3 for x in freqs])},
         index=freqs * 1e-3)
     RS_Athr_vs_radius = pd.DataFrame(
-        data={Akey: np.array([NeuronalBilayerSonophore(x, pneuron).titrate(Fdrive, tstim, toffset) * 1e-3 for x in radii])},
+        data={Akey: np.array([NeuronalBilayerSonophore(x, pneuron).titrate(Fdrive, pp) * 1e-3
+                              for x in radii])},
         index=radii * 1e9)
 
     # Initialize queue

@@ -27,9 +27,9 @@ Check out the PySONIC and ExSONIC repositories for more instructions on how to i
 
 ## Getting/generating the data
 
-Before generating the figures, one must obtain the required dataset resulting from cumbersome model simulations. 
+Before generating the figures, one must obtain the required dataset resulting from cumbersome model simulations.
 
-In order to generate that data from scratch, you can use the `get_data.py` script. 
+In order to generate that data from scratch, you can use the `get_data.py` script.
 
 Be aware that the **cumulated computation time required to run all simulations can easily exceed 1 week**, and that the **total size of entire dataset size is about 112 GB**. Therefore, it is highly advised that you run that script on a **high-performance, multi-core machine with enough disk space**, with the `mpi` option to enable multiprocessing:
 
@@ -58,14 +58,14 @@ To generate a figure:
 
 - start a *jupyter notebook*  / *jupyter lab* session:
 
-`$ jupyter lab`
+`jupyter lab`
 
 - open the figure notebook
 - select all the cells (`Ctrl` + `A`) and run them (`Ctrl` + `Enter`)
 - for the notebooks of figures 5, 6, 7 and 9, you will be prompted to enter the path to the input directory where the data is located (follow the indications indicated in the notebook)
 - wait for the complete notebook execution
 
-Upon completion, the figures panels should appear in the notebook. Additionally, they will be saved as PDFs in a *figs* sub-folder. 
+Upon completion, the figures panels should appear in the notebook. Additionally, they will be saved as PDFs in a *figs* sub-folder.
 
 # Authors
 
