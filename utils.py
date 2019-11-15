@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-10-01 20:45:29
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-11-13 13:00:35
+# @Last Modified time: 2019-11-15 00:49:30
 
 import os
 import numpy as np
@@ -211,7 +211,7 @@ def plotMapAndTraces(inputdir, pneuron, a, Fdrive, tstim, toffset, amps, PRF, DC
     for inset in insets:
         DC, Adrive = inset
         fname = '{}.pkl'.format(nbls.filecode(
-            Fdrive, Adrive, PulsedProtocol(tstim, toffset, PRF, DC), cov, 'sonic'))
+            Fdrive, Adrive, PulsedProtocol(tstim, toffset, PRF, DC), cov, 'sonic', None))
         fpath = os.path.join(subdir, fname)
         tracefig = actmap.plotQVeff(fpath, trange=tbounds, ybounds=Vbounds, figsize=trace_figsize, fs=fs)
         figcode = 'VQ trace {} {:.1f}kPa {:.0f}%DC'.format(pneuron.name, Adrive * 1e-3, DC * 1e2)
