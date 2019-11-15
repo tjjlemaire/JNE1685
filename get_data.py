@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-06-06 18:38:04
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-11-13 13:02:30
+# @Last Modified time: 2019-11-15 01:32:01
 
 ''' Generate the data necessary to produce the paper figures. '''
 
@@ -61,7 +61,7 @@ def init_sim_save(cls, a, pneuron, *args, **kwargs):
     return cls(a, pneuron).simAndSave(*args, **kwargs)
 
 
-def getCovDepAthr(pneuron, a, Fdrive, fs, tstim, toffset, PRF, DC, rs=None, deff=None):
+def getCovDepAthr(pneuron, a, Fdrive, fs, pp, rs=None, deff=None):
     if rs is None:
         logger.info('computing threshold amplitude for fs = {:.0f}%'.format(fs * 1e2))
         model = SonicNode(pneuron, a=a, Fdrive=Fdrive, fs=fs)
@@ -69,7 +69,7 @@ def getCovDepAthr(pneuron, a, Fdrive, fs, tstim, toffset, PRF, DC, rs=None, deff
         logger.info('computing threshold amplitude for deff = {}m, fs = {:.0f}%'.format(
             si_format(deff), fs * 1e2))
         model = ExtendedSonicNode(pneuron, rs, a=a, Fdrive=Fdrive, fs=fs, deff=deff)
-    Athr = model.titrate(tstim, toffset, PRF=PRF, DC=DC)
+    Athr = model.titrate(pp)
     model.clear()
     return Athr
 
@@ -282,13 +282,14 @@ def coverage():
     toffset = 0e-3  # s
     PRF = 100.0     # s
     DC = 1.0
+    pp = PulsedProtocol(tstim, toffset, PRF, DC)
     cov_range = np.linspace(0.01, 0.99, 99)
     deff = 100e-9   # m
     rs = 1e2        # Ohm.cm
 
     # Compute threshold amplitudes with both punctual and compartmental neuron models
-    queue0D = [[pneuron, a, Fdrive, fs, tstim, toffset, PRF, DC, None, None] for fs in cov_range]
-    queue1D = [[pneuron, a, Fdrive, fs, tstim, toffset, PRF, DC, rs, deff] for fs in cov_range]
+    queue0D = [[pneuron, a, Fdrive, fs, pp, None, None] for fs in cov_range]
+    queue1D = [[pneuron, a, Fdrive, fs, pp, rs, deff] for fs in cov_range]
     queue = queue0D + queue1D
 
     # Return queue with appropriate function object and mpi boolean
