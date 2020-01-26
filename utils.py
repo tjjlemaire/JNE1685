@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-10-01 20:45:29
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-11-15 00:49:30
+# @Last Modified time: 2020-01-26 19:04:38
 
 import os
 import numpy as np
@@ -173,17 +173,7 @@ def getCompTimesQuant(outdir, neuron, xvars, xkey, data_fpaths, comptimes_fpath)
 def getLookupsCompTime(pneuron):
     # Check lookup file existence
     nbls = NeuronalBilayerSonophore(32e-9, pneuron)
-    lookup_path = nbls.getLookupFilePath()
-    if not os.path.isfile(lookup_path):
-        raise FileNotFoundError('Missing lookup file: "{}"'.format(lookup_path))
-
-    # Load lookups dictionary
-    logger.debug('Loading comp times')
-    with open(lookup_path, 'rb') as fh:
-        df = pickle.load(fh)
-
-    # Extract computation times and return sum
-    tcomps4D = df['tcomp']
+    tcomps4D = nbls.getLookup(keep_tcomp=True).squeeze()['tcomp']
     return np.sum(tcomps4D)
 
 
