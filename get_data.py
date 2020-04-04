@@ -3,27 +3,27 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-06-06 18:38:04
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2019-11-15 10:35:01
+# @Last Modified time: 2020-04-04 14:42:47
 
 ''' Generate the data necessary to produce the paper figures. '''
 
 import os
-import logging
 import numpy as np
 import pandas as pd
 from inspect import signature
 
-from PySONIC.core import NeuronalBilayerSonophore, Batch, PulsedProtocol
+from PySONIC.core import NeuronalBilayerSonophore, Batch, PulsedProtocol, AcousticDrive
 from PySONIC.utils import *
 from PySONIC.neurons import getPointNeuron
 from PySONIC.parsers import Parser
-from ExSONIC.core import SonicNode, ExtendedSonicNode
 from utils import codes
 
 
 def getQueue(a, pneuron, *sim_args, outputdir=None, overwrite=False):
     ''' Build a simulation queue from input arguments, including those for model instantiation. '''
+    qss_vars = None
     sim_args = list(sim_args)
+    sim_args.append(qss_vars)
     for i, arg in enumerate(sim_args):
         if arg is not None and not isIterable(arg):
             sim_args[i] = [arg]
@@ -61,19 +61,6 @@ def init_sim_save(cls, a, pneuron, *args, **kwargs):
     return cls(a, pneuron).simAndSave(*args, **kwargs)
 
 
-def getCovDepAthr(pneuron, a, Fdrive, fs, pp, rs=None, deff=None):
-    if rs is None:
-        logger.info('computing threshold amplitude for fs = {:.0f}%'.format(fs * 1e2))
-        model = SonicNode(pneuron, a=a, Fdrive=Fdrive, fs=fs)
-    else:
-        logger.info('computing threshold amplitude for deff = {}m, fs = {:.0f}%'.format(
-            si_format(deff), fs * 1e2))
-        model = ExtendedSonicNode(pneuron, rs, a=a, Fdrive=Fdrive, fs=fs, deff=deff)
-    Athr = model.titrate(pp)
-    model.clear()
-    return Athr
-
-
 def comparisons(outdir, overwrite):
     ''' Define simulations queue for comparisons of full NICE vs coarse-grained SONIC models
         predictions across the LIFUS parameter space for RS and LTS neurons.
@@ -82,7 +69,6 @@ def comparisons(outdir, overwrite):
         :param overwrite: boolean stating whether or not overwrite existing files
         :return: 3-tuple with batch function, batch queue and mpi boolean
     '''
-
     # Parameters
     a = 32e-9  # m
     Fdrive = 500e3  # Hz
@@ -106,11 +92,12 @@ def comparisons(outdir, overwrite):
     nbls = NeuronalBilayerSonophore(a, pneuron)
     Akey = 'Athr (kPa)'
     RS_Athr_vs_freq = pd.DataFrame(
-        data={Akey: np.array([nbls.titrate(x, pp) * 1e-3 for x in freqs])},
+        data={Akey: np.array([nbls.titrate(AcousticDrive(x), pp) * 1e-3 for x in freqs])},
         index=freqs * 1e-3)
     RS_Athr_vs_radius = pd.DataFrame(
-        data={Akey: np.array([NeuronalBilayerSonophore(x, pneuron).titrate(Fdrive, pp) * 1e-3
-                              for x in radii])},
+        data={Akey: np.array([
+            NeuronalBilayerSonophore(x, pneuron).titrate(AcousticDrive(Fdrive), pp) * 1e-3
+            for x in radii])},
         index=radii * 1e9)
 
     # Initialize queue
@@ -265,35 +252,6 @@ def STN(outdir, overwrite):
 
     # Return queue with appropriate function object and mpi boolean
     return init_sim_save, queue, True
-
-
-def coverage():
-    ''' Define sonophore coverage fraction dependent titration procedures for the punctual
-        and nanoscale spatially-extended SONIC models.
-
-        :return: 3-tuple with batch function, batch queue and mpi boolean
-    '''
-
-    # Stimulation parameters
-    pneuron = getPointNeuron('RS')
-    a = 32e-9       # m
-    Fdrive = 500e3  # Hz
-    tstim = 1000e-3  # s
-    toffset = 0e-3  # s
-    PRF = 100.0     # s
-    DC = 1.0
-    pp = PulsedProtocol(tstim, toffset, PRF, DC)
-    cov_range = np.linspace(0.01, 0.99, 99)
-    deff = 100e-9   # m
-    rs = 1e2        # Ohm.cm
-
-    # Compute threshold amplitudes with both punctual and compartmental neuron models
-    queue0D = [[pneuron, a, Fdrive, fs, pp, None, None] for fs in cov_range]
-    queue1D = [[pneuron, a, Fdrive, fs, pp, rs, deff] for fs in cov_range]
-    queue = queue0D + queue1D
-
-    # Return queue with appropriate function object and mpi boolean
-    return getCovDepAthr, queue, False
 
 
 def main():
