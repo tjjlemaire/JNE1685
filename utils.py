@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-10-01 20:45:29
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2020-04-28 21:06:41
+# @Last Modified time: 2020-04-28 22:27:27
 
 ''' Utilities used across notebooks. '''
 
@@ -20,6 +20,10 @@ matplotlib.rcParams['font.family'] = 'arial'
 
 def subdirectory(name):
     ''' Return (and create if needed) a data sub-directory. '''
+    if dataroot is None:
+        raise ValueError('You must specify the data root directory')
+    if not os.path.isdir(dataroot):
+        raise ValueError('You must create the data root directory prior to running the code')
     subdir = os.path.join(dataroot, name)
     if not os.path.isdir(subdir):
         os.mkdir(subdir)
