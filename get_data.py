@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-06-06 18:38:04
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2020-04-04 14:42:47
+# @Last Modified time: 2020-04-28 21:27:42
 
 ''' Generate the data necessary to produce the paper figures. '''
 
