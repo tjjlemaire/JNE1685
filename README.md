@@ -5,7 +5,7 @@ This repository contains the Python scripts allowing to generate the figures of 
 ## Content of repository
 
 - `figure_**.ipynb`: notebooks used to generate the paper figures that result from model simulations (i.e. all except the schematic figures 1 and 3).
-- `run_all.py`: script used to run all the notebooks required to generate the figures.
+- `run_notebooks.py`: script used to run the notebooks required to generate the figures, from the command line.
 - `utils.py`: module containing utilities functions used in the notebooks.
 
 # Requirements
@@ -31,10 +31,21 @@ First, you must create a directory on your machine to hold the generated data. O
 
 ## Getting/generating the data
 
-Given the cumbersome model simulations required to create the figures, it is advised to generate the entire dataset before running the notebooks. To do so, run the `run_all.py` script to generate all the data (that scripts basically executes all the notebooks):
+Given the cumbersome model simulations required to create the figures, it is advised to run the `run_notebooks.py` script in order to generate the required dataset before opening and running the notebooks. By default, that script generates the data for all the figures, but you can specify a subset of your choice using the `-f` option.
 
+For instance, to generate data uniquely for figure 4:
 ```
-python run_all.py
+python run_all.py -f 4
+```
+
+To generate data uniquely for figures 4, 5 & 6:
+```
+python run_all.py -f 4 5 6
+```
+
+To generate data for all figures:
+```
+python run_all.py -f all
 ```
 
 Be aware that the **cumulated computation time required to run all simulations can easily exceed 1 week**, and that the **total size of entire dataset size is about 112 GB**. Therefore, it is highly advised that you run that script on a **high-performance, multi-core machine with enough disk space**.
