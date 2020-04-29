@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2018-10-01 20:45:29
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2020-04-28 22:27:27
+# @Last Modified time: 2020-04-29 13:48:58
 
 ''' Utilities used across notebooks. '''
 
@@ -43,11 +43,8 @@ def codes(a, pneuron, Fdrive, PRF, tstim):
 
 def saveFigsAsPDF(figs, figindex):
     ''' Save figures as PDFs with a specific figure index. '''
-    cdir = os.path.dirname(os.path.abspath(__file__))
-    figdir = os.path.join(cdir, 'figs')
+    figdir = subdirectory('figs')
     figbase = f'fig{figindex:02}'
-    if not os.path.isdir(figdir):
-        os.mkdir(figdir)
     for fname, fig in figs.items():
         fig.savefig(os.path.join(figdir, f'{figbase}{fname}.pdf'), transparent=True)
 
