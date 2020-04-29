@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2020-04-28 21:35:27
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2020-04-28 22:22:41
+# @Last Modified time: 2020-04-29 12:45:54
 
 ''' Run all the notebooks to produce the data and figures. '''
 
@@ -23,7 +23,7 @@ def executeNotebook(fname):
 
 
 # Gather all the notebooks in the directory
-notebooks = list(glob.glob('*.ipynb'))
+notebooks = sorted(list(glob.glob('*.ipynb')))
 
 # Execute each notebook sequentially
 for notebook in notebooks:
