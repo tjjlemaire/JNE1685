@@ -54,11 +54,11 @@ python run_notebooks.py -f all
 Be aware that the **cumulated computation time required to run all simulations can easily exceed 1 week**, and that the **total size of entire dataset size is about 112 GB**. Therefore, it is highly advised that you run that script on a **high-performance, multi-core machine with enough disk space**.
 
 The generated dataset should be split between 5 sub-folders in the indicated output directory:
-- *comparisons*: comparisons between the full NICE model and the SONIC model (figures 5 & 6)
-- *maps*: cell-type-specific activation maps (figure 7)
-- *STN*: sub-thalamic nucleus neuron modulation by low-intensity US (figure 9)
-- *coverage*: effects of partial sonophore membrane coverage on neural responses (figure 10).
-- *figs*: output folder containing PDFs of the generated figures
+- `comparisons`: comparisons between the full NICE model and the SONIC model (figures 5 & 6)
+- `maps`: cell-type-specific activation maps (figure 7)
+- `STN`: sub-thalamic nucleus neuron modulation by low-intensity US (figure 9)
+- `coverage`: effects of partial sonophore membrane coverage on neural responses (figure 10).
+- `figs`: output folder containing PDFs of the generated figures
 
 ## Generating the figures
 
