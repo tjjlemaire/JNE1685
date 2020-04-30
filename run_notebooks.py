@@ -3,23 +3,20 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2020-04-28 21:35:27
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2020-04-29 13:22:58
+# @Last Modified time: 2020-04-30 13:52:05
 
 ''' Run all the notebooks to produce the data and figures. '''
 
 import logging
 import re
 import glob
-import nbformat
-from nbconvert.preprocessors import ExecutePreprocessor
 from argparse import ArgumentParser
 from PySONIC.utils import logger
 
+from notebook_runner import runNotebook
+
 # Set logging level
 logger.setLevel(logging.INFO)
-
-# Create notebook processor object
-ep = ExecutePreprocessor(timeout=-1, kernel_name='python3')
 
 # Gather all the notebooks in the directory
 notebooks = sorted(list(glob.glob('*.ipynb')))
@@ -28,15 +25,6 @@ notebooks = sorted(list(glob.glob('*.ipynb')))
 notebook_pattern = re.compile(f'^figure_([0-9]+).ipynb$')
 notebooks = {int(notebook_pattern.match(n).group(1)): n for n in notebooks}
 valid_indexes = list(notebooks.keys())
-
-
-def executeNotebook(fname):
-    ''' Function to open, execute and save "in-place" a notebook. '''
-    with open(fname) as f:
-        nb = nbformat.read(f, as_version=4)
-    ep.preprocess(nb, {})
-    with open(fname, 'w', encoding='utf-8') as f:
-        nbformat.write(nb, f)
 
 
 def main():
@@ -67,7 +55,7 @@ def main():
     selected_notebooks = [notebooks[i] for i in figindexes]
     for notebook in selected_notebooks:
         logger.info(f'running {notebook} notebook')
-        executeNotebook(notebook)
+        runNotebook(notebook)
 
 
 if __name__ == '__main__':

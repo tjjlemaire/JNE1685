@@ -7,6 +7,7 @@ This repository contains the Python scripts allowing to generate the figures of 
 - `figure_**.ipynb`: notebooks used to generate the paper figures that result from model simulations (i.e. all except the schematic figures 1 and 3).
 - `LICENSE`: license file.
 - `utils.py`: module containing utilities functions used in the notebooks.
+- `notebook_runner`: module defining functionalities to execute notebooks from the command line.
 - `requirements.txt`: text file containing a list of python dependencies.
 - `root.py`: module specifying the path to the data root directory.
 - `run_notebooks.py`: script used to run the notebooks required to generate the figures, from the command line.
