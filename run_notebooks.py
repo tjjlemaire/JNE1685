@@ -3,7 +3,7 @@
 # @Email: theo.lemaire@epfl.ch
 # @Date:   2020-04-28 21:35:27
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2020-04-30 13:52:05
+# @Last Modified time: 2020-05-02 14:28:47
 
 ''' Run all the notebooks to produce the data and figures. '''
 
@@ -32,8 +32,11 @@ def main():
     ap = ArgumentParser()
     ap.add_argument(
         '-f', '--figure', type=str, nargs='+', default='all', help='Figure index')
-    figindexes = ap.parse_args().figure
-
+    ap.add_argument(
+        '-s', '--save', default=False, action='store_true', help='Save in-place')
+    args = ap.parse_args()
+    figindexes = args.figure
+    save = args.save
     try:
         # Check validity of provided figure indexes
         if figindexes == 'all' or figindexes == ['all']:
@@ -55,7 +58,7 @@ def main():
     selected_notebooks = [notebooks[i] for i in figindexes]
     for notebook in selected_notebooks:
         logger.info(f'running {notebook} notebook')
-        runNotebook(notebook)
+        runNotebook(notebook, save=save)
 
 
 if __name__ == '__main__':
