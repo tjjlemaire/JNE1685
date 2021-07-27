@@ -16,15 +16,15 @@ This repository contains the Python scripts allowing to generate the figures of 
 
 - Python 3.6+
 - NEURON 7.x (https://neuron.yale.edu/neuron/download/)
-- PySONIC package (https://c4science.ch/diffusion/4670/)
-- ExSONIC package (https://c4science.ch/diffusion/7145/)
+- PySONIC package (https://github.com/tjjlemaire/PySONIC)
+- MorphoSONIC package (https://github.com/tjjlemaire/MorphoSONIC)
 - nbconvert and nbformat python packages (utilities for jupyter notebooks)
 
 # Installation
 
 - Install a Python distribution
 - Install a NEURON distribution
-- Download the PySONIC AND ExSONIC code bases from their repositories, and follow the README instructions to install them as packages.
+- Download the PySONIC and MorphoSONIC code bases from their repositories, and follow the README instructions to install them as packages.
 - Install the required python dependencies to run the notebooks: `pip install -r requirements.txt`
 
 # Usage
